@@ -1,0 +1,116 @@
+name: Go CI & Release
+
+on:
+  push:
+    branches: [ "main" ]
+    tags:
+      - 'v*' # Trigger on version tags like v0.1.0, v0.1.1
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  lint-test-build:
+    name: Lint, Test & Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        # Test against your specific Go version line
+        go-version: ['1.24.x'] # Or be very specific with '1.24.3'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: ${{ matrix.go-version }}
+          cache: true # Enable Go build and module caching
+
+      - name: Verify dependencies
+        run: go mod verify
+
+      - name: Lint
+        uses: golangci/golangci-lint-action@v6
+        with:
+          version: v1.59 # Specify a golangci-lint version, this is recent and stable
+          args: --timeout=5m # Add timeout to prevent long runs
+
+      - name: Test with Race Detector
+        run: go test -race -v ./...
+
+      - name: Build (on Ubuntu for CI check)
+        run: go build -v -o fontlet_linux_amd64_ci_build ./...
+
+  build-release-artifacts:
+    name: Build Release Artifacts
+    if: startsWith(github.ref, 'refs/tags/v') # Only run on version tags
+    needs: lint-test-build # Depends on the above job succeeding
+    runs-on: ubuntu-latest # Cross-compilation happens here
+    strategy:
+      matrix:
+        goos: [linux, windows, darwin] # darwin is macOS
+        goarch: [amd64, arm64]
+        exclude:
+          # Exclude combinations that might not be needed or easily supported
+          # e.g., windows/arm64 might not be a primary target for many CLIs yet
+          - goos: windows
+            goarch: arm64
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.24.3' # Use your specific Go version for consistent release builds
+          cache: true
+
+      - name: Build for ${{ matrix.goos }}/${{ matrix.goarch }}
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          BINARY_NAME="fontlet-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            go build -v -ldflags="-s -w" -o "${BINARY_NAME}.exe" .
+          else
+            go build -v -ldflags="-s -w" -o "${BINARY_NAME}" .
+          fi
+        # -ldflags="-s -w" strips debug information and symbols, making binaries smaller. Optional.
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: fontlet-binaries-${{ matrix.goos }}-${{ matrix.goarch }} # Keep artifact names distinct
+          path: fontlet-${{ github.ref_name }}-${{ matrix.goos }}-${{ matrix.goarch }}* # Upload binary (and .exe if windows)
+
+  create-release:
+    name: Create GitHub Release
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build-release-artifacts]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to create releases
+    steps:
+      - name: Download all release artifacts
+        uses: actions/download-artifact@v4
+        # This will download all artifacts into directories named after the artifact upload name.
+        # For example, binaries will be in 'fontlet-binaries-linux-amd64/', etc.
+
+      - name: List downloaded files (for debugging)
+        run: ls -R
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          # Release name will be the tag name (e.g., v0.1.1)
+          # Body can be auto-generated or you can add custom notes
+          draft: false # Set to false to publish directly, true to create a draft
+          prerelease: contains(github.ref, '-rc') || contains(github.ref, '-beta') || contains(github.ref, '-alpha')
+          fail_on_unmatched_files: true
+          files: |
+            fontlet-binaries-linux-amd64/fontlet-${{ github.ref_name }}-linux-amd64
+            fontlet-binaries-linux-arm64/fontlet-${{ github.ref_name }}-linux-arm64
+            fontlet-binaries-windows-amd64/fontlet-${{ github.ref_name }}-windows-amd64.exe
+            fontlet-binaries-darwin-amd64/fontlet-${{ github.ref_name }}-darwin-amd64
+            fontlet-binaries-darwin-arm64/fontlet-${{ github.ref_name }}-darwin-arm64
