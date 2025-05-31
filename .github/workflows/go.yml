@@ -15,7 +15,7 @@ jobs:
     strategy:
       matrix:
         # Test against your specific Go version line
-        go-version: ['1.24.x'] # Or be very specific with '1.24.3'
+        go-version: ['1.23.x'] # Use more stable version with better tooling support
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
       - name: Lint
         uses: golangci/golangci-lint-action@v6
         with:
-          version: v1.59 # Specify a golangci-lint version, this is recent and stable
+          version: latest # Use latest version to support Go 1.24.x
           args: --timeout=5m # Add timeout to prevent long runs
 
       - name: Test with Race Detector
@@ -62,7 +62,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          go-version: '1.24.3' # Use your specific Go version for consistent release builds
+          go-version: '1.23.x' # Use stable Go version for consistent release builds
           cache: true
 
       - name: Build for ${{ matrix.goos }}/${{ matrix.goarch }}
