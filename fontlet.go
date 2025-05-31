@@ -30,7 +30,6 @@ const (
 var (
 	docStyle             = lipgloss.NewStyle().Margin(1, 2)
 	titleStyle           = lipgloss.NewStyle().Foreground(lipgloss.Color("62")).Bold(true).MarginBottom(1)
-	subtitleStyle        = lipgloss.NewStyle().Foreground(lipgloss.Color("242")).MarginBottom(1)
 	helpStyle            = lipgloss.NewStyle().Foreground(lipgloss.Color("241")).MarginTop(1)
 	errorStyle           = lipgloss.NewStyle().Foreground(lipgloss.Color("196")).Bold(true)
 	successStyle         = lipgloss.NewStyle().Foreground(lipgloss.Color("76")).Bold(true) // Green for success
@@ -43,7 +42,6 @@ var (
 	// For custom list item delegate
 	itemStyle         = lipgloss.NewStyle().PaddingLeft(2)
 	selectedItemStyle = lipgloss.NewStyle().PaddingLeft(0).Foreground(lipgloss.Color("208")) // Orange for selected item
-	previewTextStyle  = lipgloss.NewStyle().Faint(true)                 // Faint for preview text
 	fontNameStyle     = lipgloss.NewStyle().Bold(true)
 )
 
@@ -297,10 +295,10 @@ func newItemDelegate() *itemDelegate {
 	// These will be used in the Render method
 	return &itemDelegate{
 		Styles: &delegateStyles{
-			NormalTitle:   itemStyle.Copy().Height(1), // Base style for the item line
-			SelectedTitle: selectedItemStyle.Copy().Height(1),
-			NormalPreview: itemStyle.Copy().Faint(true),
-			SelectedPreview: selectedItemStyle.Copy().Foreground(lipgloss.Color("208")).Faint(false), // Selected preview less faint
+			NormalTitle:   itemStyle.Height(1), // Base style for the item line
+			SelectedTitle: selectedItemStyle.Height(1),
+			NormalPreview: itemStyle.Faint(true),
+			SelectedPreview: selectedItemStyle.Foreground(lipgloss.Color("208")).Faint(false), // Selected preview less faint
 			FontName: fontNameStyle,
 		},
 		PreviewLines: previewLines,
@@ -394,10 +392,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		newList := list.New(items, delegate, m.termWidth-docStyle.GetHorizontalFrameSize(), listHeight)
 		newList.Title = "Available Fonts (with Previews)"
 		newList.Styles.Title = listTitleStyle
-		newList.Styles.HelpStyle = helpStyle.Copy().MarginTop(0) // Adjust help style margin for list
+		newList.Styles.HelpStyle = helpStyle.MarginTop(0) // Adjust help style margin for list
 		newList.SetShowStatusBar(true) // Show item count, etc.
 		newList.SetFilteringEnabled(true)
-		newList.Styles.StatusBar = statusMessageStyle.Copy().Padding(0,1)
+		newList.Styles.StatusBar = statusMessageStyle.Padding(0,1)
 
 
 		m.fontList = newList
