@@ -349,7 +349,6 @@ func (d *itemDelegate) Render(w io.Writer, m list.Model, index int, listItem lis
 
 // --- Update ---
 func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// var cmd tea.Cmd
 	var cmds []tea.Cmd
 
 	switch msg := msg.(type) {
@@ -373,6 +372,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	case spinner.TickMsg:
 		if m.state == stateInitialLoading || m.state == stateLoadingPreviews || m.state == stateGeneratingFullOutput {
+			var cmd tea.Cmd
 			m.spinner, cmd = m.spinner.Update(msg)
 			cmds = append(cmds, cmd)
 		}
@@ -440,6 +440,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmds = append(cmds, m.spinner.Tick, m.generatePreviewsCmd())
 				}
 			} else {
+				var cmd tea.Cmd
 				m.textInput, cmd = m.textInput.Update(msg)
 				cmds = append(cmds, cmd)
 			}
@@ -459,6 +460,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 					cmds = append(cmds, m.spinner.Tick, m.renderFullFigletCmd(m.selectedFontMeta.Path, m.inputText))
 				}
 			}
+			var cmd tea.Cmd
 			m.fontList, cmd = m.fontList.Update(msg)
 			cmds = append(cmds, cmd)
 		
@@ -494,6 +496,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.statusMessage = "Output to (t)erminal or save to (f)ile?"
 				m.textInput.Blur()
 			} else {
+				var cmd tea.Cmd
 				m.textInput, cmd = m.textInput.Update(msg)
 				cmds = append(cmds, cmd)
 			}
@@ -502,6 +505,7 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			if key.Matches(msg, key.NewBinding(key.WithKeys("esc", "q"), key.WithHelp("esc/q", "back"))) {
 				m.state = stateSelectFontWithPreview
 			}
+			var cmd tea.Cmd
 			m.figletViewport, cmd = m.figletViewport.Update(msg)
 			cmds = append(cmds, cmd)
 		
